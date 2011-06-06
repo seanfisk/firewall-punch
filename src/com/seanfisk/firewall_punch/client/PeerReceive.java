@@ -5,8 +5,8 @@ import java.io.IOException;
 /**
  * Thread which handles reception of messages from the peer.
  * 
- * @author fiskse
- * @version 1.0
+ * @author Sean Fisk
+ * @version 1.1
  */
 public class PeerReceive implements Runnable
 {
@@ -14,22 +14,24 @@ public class PeerReceive implements Runnable
 
 	public PeerReceive(PeerConnection peer)
 	{
-		this.peer=peer;
+		this.peer = peer;
 	}
 
 	public void run()
 	{
-		System.out.print("> Spawned new PeerReceive thread to receive messages from the peer.\n> ");
+		System.out
+				.print("> Spawned new PeerReceive thread to receive messages from the peer.\n> ");
 		try
 		{
-			while(true)
+			while (true)
 			{
-				System.out.print("Peer says: "+peer.receiveMsg()+"\n> ");
+				System.out.print("Peer says: " + peer.receiveMsg() + "\n> ");
 			}
 		}
-		catch(IOException e)
+		catch (IOException e)
 		{
-			System.out.println("Connection to peer closed.  Peer receive thread exiting...");
+			System.out
+					.println("Connection to peer closed.  Peer receive thread exiting...");
 		}
 	}
 }

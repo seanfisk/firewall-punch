@@ -3,8 +3,8 @@ package com.seanfisk.firewall_punch;
 /**
  * Specifies types of messages between client and server
  * 
- * @author fiskse
- * @version 1.0
+ * @author Sean Fisk
+ * @version 1.1
  */
 public enum ProtoCommand
 {

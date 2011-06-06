@@ -10,8 +10,8 @@ import java.net.Socket;
 /**
  * Represents a connection to the main server.
  * 
- * @author fiskse
- * @version 1.0
+ * @author Sean Fisk
+ * @version 1.1
  */
 public class ServerConnection
 {
@@ -29,11 +29,11 @@ public class ServerConnection
 	 */
 	public ServerConnection(InetAddress host, int port) throws IOException
 	{
-		addr=new InetSocketAddress(host,port);
-		System.out.println("Trying TCP connection to server "+this+'.');
-		sock=new Socket(host,port);
-		in=new ObjectInputStream(sock.getInputStream());
-		out=new ObjectOutputStream(sock.getOutputStream());
+		addr = new InetSocketAddress(host, port);
+		System.out.println("Trying TCP connection to server " + this + '.');
+		sock = new Socket(host, port);
+		in = new ObjectInputStream(sock.getInputStream());
+		out = new ObjectOutputStream(sock.getOutputStream());
 	}
 
 	/**
@@ -43,12 +43,15 @@ public class ServerConnection
 	 */
 	public void close() throws IOException
 	{
-		System.out.println("Closing connection with server "+this+'.');
+		System.out.println("Closing connection with server " + this + '.');
 		in.close();
 		out.close();
 		sock.close();
 	}
 
+	/**
+	 * Returns the address and port of the socket.
+	 */
 	public String toString()
 	{
 		return addr.toString();

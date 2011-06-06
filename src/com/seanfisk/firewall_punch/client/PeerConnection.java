@@ -10,8 +10,8 @@ import java.net.SocketException;
  * Holds the connection from this client to its peer. The constructor accepts no
  * parameters.
  * 
- * @author fiskse
- * @version 1.0
+ * @author Sean Fisk
+ * @version 1.1
  */
 public class PeerConnection
 {
@@ -25,9 +25,9 @@ public class PeerConnection
 	{
 		try
 		{
-			sock=new DatagramSocket();
+			sock = new DatagramSocket();
 		}
-		catch(SocketException e)
+		catch (SocketException e)
 		{
 			System.err.println("Couldn't bind UDP socket to localhost.");
 			e.printStackTrace();
@@ -42,7 +42,7 @@ public class PeerConnection
 	 */
 	public void setAddr(InetSocketAddress addr)
 	{
-		this.addr=addr;
+		this.addr = addr;
 	}
 
 	/**
@@ -70,14 +70,14 @@ public class PeerConnection
 	 */
 	public void sendMsg(String msg)
 	{
-		byte[] buf=msg.getBytes();
+		byte[] buf = msg.getBytes();
 		try
 		{
-			sock.send(new DatagramPacket(buf,buf.length,addr));
+			sock.send(new DatagramPacket(buf, buf.length, addr));
 		}
-		catch(IOException e)
+		catch (IOException e)
 		{
-			System.err.println("Message sending to "+this+" failed.");
+			System.err.println("Message sending to " + this + " failed.");
 			e.printStackTrace();
 		}
 	}
@@ -90,10 +90,10 @@ public class PeerConnection
 	 */
 	public String receiveMsg() throws IOException
 	{
-		byte[] buf=new byte[256];
-		DatagramPacket packet=new DatagramPacket(buf,buf.length);
+		byte[] buf = new byte[256];
+		DatagramPacket packet = new DatagramPacket(buf, buf.length);
 		sock.receive(packet);
-		return new String(packet.getData(),0,packet.getLength());
+		return new String(packet.getData(), 0, packet.getLength());
 	}
 
 	/**
