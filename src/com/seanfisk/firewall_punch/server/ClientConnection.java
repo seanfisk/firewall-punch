@@ -5,6 +5,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.util.concurrent.Semaphore;
 
 import com.seanfisk.firewall_punch.ProtoCommand;
 
@@ -18,28 +19,28 @@ import com.seanfisk.firewall_punch.ProtoCommand;
  */
 public class ClientConnection implements Runnable
 {
-	private static int clientNum=0;
-	private int num;
-	private Socket sock;
-	private InetSocketAddress addr;
-	private volatile InetSocketAddress udpAddr=null; // Declaring volatile
-	// ensures the var will
-	// be updated correctly
+	private Semaphore addressSem; // Used to rendezvous the threads after their client's info has been acquired
+	private int clientNum; // Indicates first (0) or second (1) client
+	private Socket sock; // Communication socket
+	private InetSocketAddress addr; // Address of this client
+	private InetSocketAddress udpAddr=null; // Address and port on which this client accepts UDP packets
 	private ObjectInputStream in;
 	private ObjectOutputStream out;
-	private ClientConnection partner;
+	private ClientConnection partner; // Reference to this client's partner's ClientConnection instance
 
 	/**
 	 * Class constructor.
 	 * 
-	 * @param sock
-	 *            A {@link Socket} from {@link ServerSock.accept()}.
+	 * @param clientNum Indicates first (0) or second (1) client.
+	 * @param sock A {@link Socket} from {@link ServerSock.accept()}.
+	 * @param addressSem Semaphore used for rendezvous.
 	 * @throws IOException
 	 */
-	public ClientConnection(Socket sock) throws IOException
+	public ClientConnection(int clientNum, Socket sock, Semaphore addressSem) throws IOException
 	{
-		num=clientNum++%2;
+		this.clientNum = clientNum;
 		this.sock=sock;
+		this.addressSem = addressSem;
 		addr=new InetSocketAddress(sock.getInetAddress(),sock.getPort());
 		out=new ObjectOutputStream(sock.getOutputStream());
 		in=new ObjectInputStream(sock.getInputStream());
@@ -53,36 +54,9 @@ public class ClientConnection implements Runnable
 	{
 		sendClientNum();
 		sendMsg("Partner found: "+partner+"\nRequesting UDP info from partner...");
-		partner.requestUDPAddr();
-		/*
-		 * This following block ensures the partner has this client's UDP port
-		 * information before continuing. It is synchronized to make certain
-		 * that only one client is in this block at once. If this client's UDP
-		 * info has not been obtained, it waits for the partner to request it.
-		 * If the info has been obtained, it lets the partner (who may or may
-		 * not be waiting to close its connection) know that it is now OK to
-		 * close its connection.
-		 */
-		synchronized(this)
-		{
-			if(udpAddr==null)
-			{
-				try
-				{
-					System.out.println(this+" is waiting...");
-					wait();
-				}
-				catch(InterruptedException e)
-				{
-					e.printStackTrace();
-				}
-			}
-			else
-			{
-				System.out.println(this+" is done with partner's connection.  Notifying partner it can close its connection at will.");
-				notifyAll();
-			}
-		}
+		partner.requestUDPPort();
+		// We want both threads to rendezvous here, since they have now acquired their client's addresses.
+		addressSem.release();
 		sendPartnerAddr();
 		close();
 		System.out.println("Client thread "+partner+" exiting.");
@@ -105,13 +79,17 @@ public class ClientConnection implements Runnable
 	 * @param msg
 	 *            the message to send.
 	 */
-	public synchronized void sendMsg(String msg)
+	public void sendMsg(String msg)
 	{
 		try
 		{
-			out.writeInt(ProtoCommand.MESSAGE.ordinal());
-			out.writeObject(msg);
-			out.flush();
+			// Use of out must be synchronized because it is used before the rendezvous
+			synchronized(out)
+			{
+				out.writeInt(ProtoCommand.MESSAGE.ordinal());
+				out.writeObject(msg);
+				out.flush();
+			}
 		}
 		catch(IOException e)
 		{
@@ -124,12 +102,16 @@ public class ClientConnection implements Runnable
 	 * Tells the client whether it is the first or second client. The second
 	 * client doesn't need to punch.
 	 */
-	private synchronized void sendClientNum()
+	private void sendClientNum()
 	{
 		try
 		{
-			out.writeInt(ProtoCommand.CLIENT_NUM.ordinal());
-			out.writeInt(num);
+			// Use of out must be synchronized because it is used before the rendezvous
+			synchronized(out)
+			{
+				out.writeInt(ProtoCommand.CLIENT_NUM.ordinal());
+				out.writeInt(clientNum);
+			}
 		}
 		catch(IOException e)
 		{
@@ -141,11 +123,11 @@ public class ClientConnection implements Runnable
 	/**
 	 * Sends the peer's address to this client.
 	 */
-	public synchronized void sendPartnerAddr()
+	public void sendPartnerAddr()
 	{
 		try
 		{
-			// Send info to client
+			// Send UDP port of the partner to the client
 			System.out.println("Sending partner info about "+partner+" to "+this+'.');
 			out.writeInt(ProtoCommand.INFO.ordinal());
 			out.writeObject(partner.getUDPAddr());
@@ -161,13 +143,17 @@ public class ClientConnection implements Runnable
 	/**
 	 * Requests this client's UDP socket port.
 	 */
-	public synchronized void requestUDPAddr()
+	public void requestUDPPort()
 	{
 		System.out.println("Requesting UDP port for "+this+".");
 		try
 		{
-			out.writeInt(ProtoCommand.REQUEST.ordinal());
-			out.flush();
+			// Use of out must be synchronized because it is used before the rendezvous
+			synchronized(out)
+			{
+				out.writeInt(ProtoCommand.REQUEST.ordinal());
+				out.flush();
+			}
 		}
 		catch(IOException e)
 		{
@@ -176,6 +162,7 @@ public class ClientConnection implements Runnable
 		}
 		try
 		{
+			// Assign the UDP address information of this client
 			udpAddr=new InetSocketAddress(addr.getAddress(),in.readInt());
 			System.out.println("Got info for "+this+": UDP port "+udpAddr.getPort());
 		}
@@ -207,7 +194,7 @@ public class ClientConnection implements Runnable
 			// Send the close command to the clients
 			out.writeInt(ProtoCommand.CLOSE.ordinal());
 			out.flush();
-			// Close the streams
+			// Close the streams, we are done
 			in.close();
 			out.close();
 			sock.close();
@@ -219,6 +206,9 @@ public class ClientConnection implements Runnable
 		}
 	}
 
+	/**
+	 * Returns address and port of this client.
+	 */
 	public String toString()
 	{
 		return addr.toString();

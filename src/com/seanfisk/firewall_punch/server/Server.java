@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.UnknownHostException;
+import java.util.concurrent.Semaphore;
 
 /**
  * Simple firewall punch server. This is a multi-threaded mediating server which
@@ -59,9 +60,10 @@ public class Server
 		ClientConnection c1, c2;
 		while(true)
 		{
+			Semaphore addressSem = new Semaphore(-2);
 			try
 			{
-				c1=new ClientConnection(serverSock.accept());
+				c1=new ClientConnection(0, serverSock.accept(), addressSem);
 				System.out.println("Connected first client: "+c1);
 				c1.sendMsg("Waiting for partner...");
 			}
@@ -73,7 +75,7 @@ public class Server
 			}
 			try
 			{
-				c2=new ClientConnection(serverSock.accept());
+				c2=new ClientConnection(1, serverSock.accept(), addressSem);
 				System.out.println("Connected second client: "+c2);
 				// Spawn a new thread to handle the two clients
 				c1.setPartner(c2);
