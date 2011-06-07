@@ -75,12 +75,12 @@ public class PeerConnection
 	}
 
 	/**
-	 * Punches the partner's firewall.
+	 * Punches your own firewall.
 	 */
-	public void punch()
+	public void sendPunchMsg()
 	{
-		System.out.println("Attempting to punch peer's firewall...");
-		sendMsg("[This is the firewall punch packet.  If you get it, your firewall did not need to be punched.]");
+		System.out.println("Attempting to punch your own firewall...");
+		sendMsg("[This is the firewall punch packet. If you receive it, your firewall is already accepting connections and did not need to be punched.]");
 	}
 
 	/**
@@ -98,7 +98,7 @@ public class PeerConnection
 		}
 		catch (IOException e)
 		{
-			System.err.println("Message sending to " + this + " failed.");
+			System.err.println("Sending message to " + this + " failed.");
 			e.printStackTrace();
 		}
 	}
@@ -125,6 +125,9 @@ public class PeerConnection
 		sock.close();
 	}
 
+	/**
+	 * @return A String representing the host and port of this UDP socket.
+	 */
 	public String toString()
 	{
 		return addr.toString();

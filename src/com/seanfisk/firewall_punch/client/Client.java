@@ -40,7 +40,7 @@ public class Client
 {
 	public static void main(String[] args)
 	{
-		// Check args
+		// Validate command-line arguments
 		if ((args.length >= 1 && args[0].equalsIgnoreCase("--help"))
 				|| args.length != 2)
 		{
@@ -48,7 +48,7 @@ public class Client
 			System.exit(1);
 		}
 
-		// Show localhost info
+		// Show localhost information
 		try
 		{
 			System.out.println("This computer is " + InetAddress.getLocalHost()
@@ -146,9 +146,21 @@ public class Client
 		Thread peerRcv = new Thread(new PeerReceive(peer));
 		peerRcv.start();
 
-		// Punch the partner's firewall
-		if (num != 0) // Punch if this is the first client, or the client num hasn't been set
-			peer.punch();
+		if (num != 0)
+			peer.sendPunchMsg(); // Punch your firewall if you are the first client, or the client num hasn't been set
+		else
+		{
+			// Wait for the partner to punch their own firewall, then send off the test message which punches your firewall
+			try
+			{
+				Thread.sleep(1000);
+			}
+			catch (InterruptedException e)
+			{
+				System.err.println("Sleep while waiting for partner to punch their firewall was interrupted.");
+				e.printStackTrace();
+			}
+		}
 		peer.sendMsg("This is a test message.  If you receive it, your firewall has been punched.");
 
 		// Read messages from stdin, then send them to the peer

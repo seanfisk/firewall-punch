@@ -84,34 +84,37 @@ public class ClientConnection implements Runnable
 				+ "\nRequesting UDP info from partner...");
 		partner.requestUDPPort();
 		// We want both threads to rendezvous here, since they have now acquired
-		// their client's addresses.
+		// their client's addresses. We use an opposing {@link Object.wait()}/{@link Object.notify()} to do so.
 		try
 		{
 			if(clientNum == 0)
 			{
-				synchronized(this)
-				{
-					wait();
-				}
+				// If the first client, wait on the partner, then notify the partner waiting on you
 				synchronized(partner)
 				{
-					partner.notify();
+					partner.wait();
+				}
+				synchronized(this)
+				{
+					notify();
 				}
 			}
 			else
 			{
-				synchronized(partner)
-				{
-					partner.notify();
-				}
+				// If the second client, notify the partner waiting on you, then wait on the partner 
 				synchronized(this)
 				{
-					wait();
+					notify();
+				}
+				synchronized(partner)
+				{
+					partner.wait();
 				}
 			}
 		}
 		catch(InterruptedException e)
 		{
+			System.err.println("Error occurred during partner rendezvous.");
 			e.printStackTrace();
 		}
 		sendPartnerAddr();
@@ -270,7 +273,7 @@ public class ClientConnection implements Runnable
 	}
 
 	/**
-	 * Returns address and port of the socket.
+	 * @return A String representing the host and port of this socket.
 	 */
 	public String toString()
 	{

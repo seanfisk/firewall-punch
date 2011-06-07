@@ -37,7 +37,7 @@ public class Server
 {
 	public static void main(String[] args)
 	{
-		// Check args
+		// Validate command-line arguments
 		if ((args.length >= 1 && args[0].equalsIgnoreCase("--help"))
 				|| args.length != 1)
 		{
@@ -58,7 +58,7 @@ public class Server
 			System.exit(1);
 		}
 
-		// Show localhost info
+		// Show localhost information
 		try
 		{
 			System.out.println("This computer is " + InetAddress.getLocalHost()
