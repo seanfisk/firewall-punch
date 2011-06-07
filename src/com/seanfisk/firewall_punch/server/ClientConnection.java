@@ -26,7 +26,6 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
-import java.util.concurrent.Semaphore;
 
 import com.seanfisk.firewall_punch.ProtoCommand;
 
@@ -40,11 +39,6 @@ import com.seanfisk.firewall_punch.ProtoCommand;
  */
 public class ClientConnection implements Runnable
 {
-	/**
-	 * Used to rendezvous the threads after their client's info has been
-	 * acquired.
-	 */
-	private Semaphore addressSem;
 	/** Indicates first (0) or second (1) client. */
 	private int clientNum;
 	/** Communication socket. */
@@ -69,12 +63,11 @@ public class ClientConnection implements Runnable
 	 *            Semaphore used for rendezvous.
 	 * @throws IOException
 	 */
-	public ClientConnection(int clientNum, Socket sock, Semaphore addressSem)
+	public ClientConnection(int clientNum, Socket sock)
 			throws IOException
 	{
 		this.clientNum = clientNum;
 		this.sock = sock;
-		this.addressSem = addressSem;
 		addr = new InetSocketAddress(sock.getInetAddress(), sock.getPort());
 		out = new ObjectOutputStream(sock.getOutputStream());
 		in = new ObjectInputStream(sock.getInputStream());
@@ -92,7 +85,35 @@ public class ClientConnection implements Runnable
 		partner.requestUDPPort();
 		// We want both threads to rendezvous here, since they have now acquired
 		// their client's addresses.
-		addressSem.release();
+		try
+		{
+			if(clientNum == 0)
+			{
+				synchronized(this)
+				{
+					wait();
+				}
+				synchronized(partner)
+				{
+					partner.notify();
+				}
+			}
+			else
+			{
+				synchronized(partner)
+				{
+					partner.notify();
+				}
+				synchronized(this)
+				{
+					wait();
+				}
+			}
+		}
+		catch(InterruptedException e)
+		{
+			e.printStackTrace();
+		}
 		sendPartnerAddr();
 		close();
 		System.out.println("Client thread " + partner + " exiting.");
