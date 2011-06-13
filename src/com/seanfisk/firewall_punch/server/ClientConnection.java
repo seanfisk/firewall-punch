@@ -26,6 +26,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.util.concurrent.Semaphore;
 
 import com.seanfisk.firewall_punch.ProtoCommand;
 
@@ -51,6 +52,11 @@ public class ClientConnection implements Runnable
 	private ObjectOutputStream out;
 	/** Reference to this client's partner's ClientConnection instance. */
 	private ClientConnection partner;
+	/**
+	 * Semaphore which tracks whether this instance has received their client's
+	 * UDP port.
+	 */
+	private Semaphore hasPortSemaphore;
 
 	/**
 	 * Class constructor.
@@ -63,14 +69,14 @@ public class ClientConnection implements Runnable
 	 *            Semaphore used for rendezvous.
 	 * @throws IOException
 	 */
-	public ClientConnection(int clientNum, Socket sock)
-			throws IOException
+	public ClientConnection(int clientNum, Socket sock) throws IOException
 	{
 		this.clientNum = clientNum;
 		this.sock = sock;
 		addr = new InetSocketAddress(sock.getInetAddress(), sock.getPort());
 		out = new ObjectOutputStream(sock.getOutputStream());
 		in = new ObjectInputStream(sock.getInputStream());
+		hasPortSemaphore = new Semaphore(0); // Initialize to 0, doesn't matter if the semaphore is fair
 		sendMsg("Connection to server established.");
 	}
 
@@ -84,39 +90,9 @@ public class ClientConnection implements Runnable
 				+ "\nRequesting UDP info from partner...");
 		partner.requestUDPPort();
 		// We want both threads to rendezvous here, since they have now acquired
-		// their client's addresses. We use an opposing {@link Object.wait()}/{@link Object.notify()} to do so.
-		try
-		{
-			if(clientNum == 0)
-			{
-				// If the first client, wait on the partner, then notify the partner waiting on you
-				synchronized(partner)
-				{
-					partner.wait();
-				}
-				synchronized(this)
-				{
-					notify();
-				}
-			}
-			else
-			{
-				// If the second client, notify the partner waiting on you, then wait on the partner 
-				synchronized(this)
-				{
-					notify();
-				}
-				synchronized(partner)
-				{
-					partner.wait();
-				}
-			}
-		}
-		catch(InterruptedException e)
-		{
-			System.err.println("Error occurred during partner rendezvous.");
-			e.printStackTrace();
-		}
+		// their client's addresses. For details on how this is done, see Rendezvous in the Little Book of Semaphores by Allen Downey.
+		hasPortSemaphore.release();
+		partner.waitForPort(); // Calls hasPortSemaphore.acquire() on the partner
 		sendPartnerAddr();
 		close();
 		System.out.println("Client thread " + partner + " exiting.");
@@ -183,28 +159,6 @@ public class ClientConnection implements Runnable
 	}
 
 	/**
-	 * Sends the peer's address to this client.
-	 */
-	public void sendPartnerAddr()
-	{
-		try
-		{
-			// Send UDP port of the partner to the client
-			System.out.println("Sending partner info about " + partner + " to "
-					+ this + '.');
-			out.writeInt(ProtoCommand.INFO.ordinal());
-			out.writeObject(partner.getUDPAddr());
-			out.flush();
-		}
-		catch (IOException e)
-		{
-			System.out.println("Sending partner info about " + this + " to "
-					+ partner + " failed.");
-			sendMsg("Connection to " + partner + " lost.");
-		}
-	}
-
-	/**
 	 * Requests this client's UDP socket port.
 	 */
 	public void requestUDPPort()
@@ -236,6 +190,45 @@ public class ClientConnection implements Runnable
 		{
 			System.err.println("Receiving info from " + this + " failed.");
 			e.printStackTrace();
+		}
+	}
+
+	/**
+	 * Waits for this client's UDP port information to arrive.
+	 */
+	public void waitForPort()
+	{
+		try
+		{
+			hasPortSemaphore.acquire();
+		}
+		catch (InterruptedException e)
+		{
+			System.err.println("Waiting for port for " + this
+					+ " was interrupted.");
+			e.printStackTrace();
+		}
+	}
+
+	/**
+	 * Sends the peer's address to this client.
+	 */
+	public void sendPartnerAddr()
+	{
+		try
+		{
+			// Send UDP port of the partner to the client
+			System.out.println("Sending partner info about " + partner + " to "
+					+ this + '.');
+			out.writeInt(ProtoCommand.INFO.ordinal());
+			out.writeObject(partner.getUDPAddr());
+			out.flush();
+		}
+		catch (IOException e)
+		{
+			System.out.println("Sending partner info about " + this + " to "
+					+ partner + " failed.");
+			sendMsg("Connection to " + partner + " lost.");
 		}
 	}
 
