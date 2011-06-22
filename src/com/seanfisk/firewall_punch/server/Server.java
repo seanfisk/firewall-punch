@@ -31,7 +31,7 @@ import java.net.UnknownHostException;
  * sets up a peer-to-peer connection between pairs of consecutive clients.
  * 
  * @author Sean Fisk
- * @version 1.1
+ * @version 1.3
  */
 public class Server
 {
@@ -93,7 +93,7 @@ public class Server
 			{
 				c1 = new ClientConnection(0, serverSock.accept());
 				System.out.println("Connected first client: " + c1);
-				c1.sendMsg("Waiting for partner...");
+				c1.sendMessage("Waiting for partner...");
 			}
 			catch (IOException e)
 			{

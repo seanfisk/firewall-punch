@@ -34,7 +34,7 @@ import com.seanfisk.firewall_punch.ProtoCommand;
  * connects to the firewall punch server.
  * 
  * @author Sean Fisk
- * @version 1.1
+ * @version 1.3
  */
 public class Client
 {
@@ -60,10 +60,12 @@ public class Client
 			e1.printStackTrace();
 		}
 
-		ServerConnection server = null; // Hold the connection to the server
-		int num = 0;
-		PeerConnection peer = new PeerConnection(); // Hold the connection to
-													// the peer
+		// Hold the connection to the server
+		ServerConnection server = null;
+		// Hold the number of this client
+		int num = -1;
+		// Hold the connection to the peer
+		PeerConnection peer = new PeerConnection();
 		try
 		{
 			// Establish new server connection
@@ -97,7 +99,7 @@ public class Client
 					break;
 				case INFO:
 					// Receive the partner's info
-					peer.setAddr((InetSocketAddress) server.in.readObject());
+					peer.setAddress((InetSocketAddress) server.in.readObject());
 					System.out.println("Received partner info: " + peer);
 					break;
 				default: // Incorrect protocols
@@ -141,30 +143,33 @@ public class Client
 			}
 			System.exit(1);
 		}
+		
+		// Check for client number
+		if(num == -1)
+		{
+			System.err.println("The client number was never set. Cannot continue.");
+			System.exit(1);
+		}
 
-		// Spawn a thread which just listens for messages
+		if (num == 0) // If you are the first client
+		{
+			peer.sendPunchMessage();
+			peer.waitForTestMessage(false);
+			peer.sendTestMessage(true); // Respond to test message
+		}
+		else // You are the second client
+		{
+			peer.waitForPunchPacket();
+			peer.sendTestMessage(false);
+			peer.waitForTestMessage(true); // Wait for response
+		}
+
+		// Create a thread which just listens for messages
 		Thread peerRcv = new Thread(new PeerReceive(peer));
 		peerRcv.start();
 
-		if (num != 0)
-			peer.sendPunchMsg(); // Punch your firewall if you are the first client, or the client num hasn't been set
-		else
-		{
-			// Wait for the partner to punch their own firewall, then send off the test message which punches your firewall
-			try
-			{
-				Thread.sleep(1000);
-			}
-			catch (InterruptedException e)
-			{
-				System.err.println("Sleep while waiting for partner to punch their firewall was interrupted.");
-				e.printStackTrace();
-			}
-		}
-		peer.sendMsg("This is a test message.  If you receive it, your firewall has been punched.");
-
 		// Read messages from stdin, then send them to the peer
-		System.out.print("Type some messages to send to the peer.\n> ");
+		System.out.print("> Type some messages to send to the peer.\n> ");
 		Console cons = System.console();
 		String msg;
 		while (true)
@@ -174,10 +179,10 @@ public class Client
 					|| msg.equalsIgnoreCase("quit")
 					|| msg.equalsIgnoreCase("exit"))
 				break;
-			peer.sendMsg(msg);
 			System.out.print("> ");
+			peer.sendMessage(msg);
 		}
-		peer.sendMsg("I have exited.");
+		peer.sendMessage("I have exited.");
 		peer.close();
 	}
 }

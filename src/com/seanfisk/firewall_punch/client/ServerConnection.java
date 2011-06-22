@@ -32,11 +32,11 @@ import java.net.Socket;
  * Represents a connection to the main server.
  * 
  * @author Sean Fisk
- * @version 1.1
+ * @version 1.3
  */
 public class ServerConnection
 {
-	private InetSocketAddress addr;
+	private InetSocketAddress address;
 	private Socket sock;
 	public ObjectInputStream in;
 	public ObjectOutputStream out;
@@ -50,7 +50,7 @@ public class ServerConnection
 	 */
 	public ServerConnection(InetAddress host, int port) throws IOException
 	{
-		addr = new InetSocketAddress(host, port);
+		address = new InetSocketAddress(host, port);
 		System.out.println("Trying TCP connection to server " + this + '.');
 		sock = new Socket(host, port);
 		in = new ObjectInputStream(sock.getInputStream());
@@ -75,6 +75,6 @@ public class ServerConnection
 	 */
 	public String toString()
 	{
-		return addr.toString();
+		return address.toString();
 	}
 }

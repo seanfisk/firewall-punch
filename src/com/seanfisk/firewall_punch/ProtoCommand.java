@@ -22,10 +22,10 @@
 package com.seanfisk.firewall_punch;
 
 /**
- * Specifies types of messages between client and server
+ * Specifies types of messages between client and server.
  * 
  * @author Sean Fisk
- * @version 1.1
+ * @version 1.3
  */
 public enum ProtoCommand
 {

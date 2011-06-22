@@ -36,7 +36,7 @@ import com.seanfisk.firewall_punch.ProtoCommand;
  * is also {@link Runnable} to use concurrency for communicating with the pair.
  * 
  * @author Sean Fisk
- * @version 1.1
+ * @version 1.3
  */
 public class ClientConnection implements Runnable
 {
@@ -45,9 +45,9 @@ public class ClientConnection implements Runnable
 	/** Communication socket. */
 	private Socket sock;
 	/** Address of this client */
-	private InetSocketAddress addr;
+	private InetSocketAddress address;
 	/** Address and port on which this client accepts UDP packets. */
-	private InetSocketAddress udpAddr = null;
+	private InetSocketAddress udpAddress = null;
 	private ObjectInputStream in;
 	private ObjectOutputStream out;
 	/** Reference to this client's partner's ClientConnection instance. */
@@ -62,22 +62,22 @@ public class ClientConnection implements Runnable
 	 * Class constructor.
 	 * 
 	 * @param clientNum
-	 *            Indicates first (0) or second (1) client.
+	 *            indicates first (0) or second (1) client.
 	 * @param sock
-	 *            A {@link Socket} from {@link ServerSock.accept()}.
+	 *            a {@link Socket} from {@link ServerSock.accept()}.
 	 * @param addressSem
-	 *            Semaphore used for rendezvous.
+	 *            semaphore used for rendezvous.
 	 * @throws IOException
 	 */
 	public ClientConnection(int clientNum, Socket sock) throws IOException
 	{
 		this.clientNum = clientNum;
 		this.sock = sock;
-		addr = new InetSocketAddress(sock.getInetAddress(), sock.getPort());
+		address = new InetSocketAddress(sock.getInetAddress(), sock.getPort());
 		out = new ObjectOutputStream(sock.getOutputStream());
 		in = new ObjectInputStream(sock.getInputStream());
 		hasPortSemaphore = new Semaphore(0); // Initialize to 0, doesn't matter if the semaphore is fair
-		sendMsg("Connection to server established.");
+		sendMessage("Connection to server established.");
 	}
 
 	/**
@@ -86,14 +86,14 @@ public class ClientConnection implements Runnable
 	public void run()
 	{
 		sendClientNum();
-		sendMsg("Partner found: " + partner
+		sendMessage("Partner found: " + partner
 				+ "\nRequesting UDP info from partner...");
 		partner.requestUDPPort();
 		// We want both threads to rendezvous here, since they have now acquired
 		// their client's addresses. For details on how this is done, see Rendezvous in the Little Book of Semaphores by Allen Downey.
 		hasPortSemaphore.release();
 		partner.waitForPort(); // Calls hasPortSemaphore.acquire() on the partner
-		sendPartnerAddr();
+		sendPartnerAddress();
 		close();
 		System.out.println("Client thread " + partner + " exiting.");
 	}
@@ -112,10 +112,10 @@ public class ClientConnection implements Runnable
 	/**
 	 * Sends a message to this client.
 	 * 
-	 * @param msg
+	 * @param message
 	 *            the message to send.
 	 */
-	public void sendMsg(String msg)
+	public void sendMessage(String message)
 	{
 		try
 		{
@@ -124,7 +124,7 @@ public class ClientConnection implements Runnable
 			synchronized (out)
 			{
 				out.writeInt(ProtoCommand.MESSAGE.ordinal());
-				out.writeObject(msg);
+				out.writeObject(message);
 				out.flush();
 			}
 		}
@@ -182,9 +182,9 @@ public class ClientConnection implements Runnable
 		try
 		{
 			// Assign the UDP address information of this client
-			udpAddr = new InetSocketAddress(addr.getAddress(), in.readInt());
+			udpAddress = new InetSocketAddress(address.getAddress(), in.readInt());
 			System.out.println("Got info for " + this + ": UDP port "
-					+ udpAddr.getPort());
+					+ udpAddress.getPort());
 		}
 		catch (IOException e)
 		{
@@ -213,7 +213,7 @@ public class ClientConnection implements Runnable
 	/**
 	 * Sends the peer's address to this client.
 	 */
-	public void sendPartnerAddr()
+	public void sendPartnerAddress()
 	{
 		try
 		{
@@ -221,14 +221,14 @@ public class ClientConnection implements Runnable
 			System.out.println("Sending partner info about " + partner + " to "
 					+ this + '.');
 			out.writeInt(ProtoCommand.INFO.ordinal());
-			out.writeObject(partner.getUDPAddr());
+			out.writeObject(partner.getUDPAddress());
 			out.flush();
 		}
 		catch (IOException e)
 		{
 			System.out.println("Sending partner info about " + this + " to "
 					+ partner + " failed.");
-			sendMsg("Connection to " + partner + " lost.");
+			sendMessage("Connection to " + partner + " lost.");
 		}
 	}
 
@@ -237,9 +237,9 @@ public class ClientConnection implements Runnable
 	 * 
 	 * @return the UDP address of this client
 	 */
-	public InetSocketAddress getUDPAddr()
+	public InetSocketAddress getUDPAddress()
 	{
-		return udpAddr;
+		return udpAddress;
 	}
 
 	/**
@@ -270,6 +270,6 @@ public class ClientConnection implements Runnable
 	 */
 	public String toString()
 	{
-		return addr.toString();
+		return address.toString();
 	}
 }
