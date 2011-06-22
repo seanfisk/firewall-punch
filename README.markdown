@@ -16,7 +16,7 @@ How to Use
 
 **Server**
 
-1. Download the [Server JAR file](http://sourceforge.net/projects/firewallpunch/files/1.1/fp_server.jar/download).
+1. Download the [Server JAR file](http://sourceforge.net/projects/firewallpunch/files/1.3/fp_server.jar/download).
 - Open a terminal in the download directory.
 - Run the server with
 
@@ -24,7 +24,7 @@ How to Use
 
 **Client**
 
-1. Download the [Client JAR file](http://sourceforge.net/projects/firewallpunch/files/1.1/fp_client.jar/download).
+1. Download the [Client JAR file](http://sourceforge.net/projects/firewallpunch/files/1.3/fp_client.jar/download).
 - Open a terminal in the download directory.
 - Run the client with
 
