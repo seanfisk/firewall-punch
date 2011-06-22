@@ -173,11 +173,11 @@ public class PeerConnection
 	{
 		try
 		{
-			System.out.println("> Peer> " + receiveMessageWithTimeout(2000));
+			System.out.println("> Peer> " + receiveMessageWithTimeout(5000));
 		}
 		catch(SocketTimeoutException e)
 		{
-			System.err.println("> " + (isResponse ? "Response to " : "T") + "est message not received within timeout. This probably means that your firewall has not been punched.");
+			System.err.println("> " + (isResponse ? "Response to t" : "T") + "est message not received within timeout. This probably means that your firewall has not been punched.");
 			System.err.println("> However, communcation will remain open.");
 		}
 		catch (IOException e)
